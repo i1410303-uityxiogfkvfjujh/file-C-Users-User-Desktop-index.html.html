@@ -72,5 +72,163 @@ button {
 
 <div id="ui">
   分數：<span id="score">0</span><br>
-  生命：<span id="h
+  生命：<span id="hp">3</span>
+</div>
 
+<div id="crosshair"></div>
+
+<div id="gameover">
+  <div id="finalScore"></div>
+  <button onclick="location.reload()">重新開始</button>
+</div>
+
+<script>
+let score = 0;
+let hp = 3;
+let gameRunning = true;
+let bossActive = false;
+let lastBossScore = 0;
+
+const scoreSpan = document.getElementById("score");
+const hpSpan = document.getElementById("hp");
+const crosshair = document.getElementById("crosshair");
+const gameover = document.getElementById("gameover");
+const finalScore = document.getElementById("finalScore");
+
+let mouseX = innerWidth / 2;
+let mouseY = innerHeight / 2;
+
+document.addEventListener("mousemove", e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  crosshair.style.left = mouseX + "px";
+  crosshair.style.top = mouseY + "px";
+});
+
+document.addEventListener("mousedown", () => {
+  if (!gameRunning) return;
+
+  const targets = document.querySelectorAll(".enemy, .boss");
+  for (const target of targets) {
+    const r = target.getBoundingClientRect();
+    if (
+      mouseX > r.left && mouseX < r.right &&
+      mouseY > r.top && mouseY < r.bottom
+    ) {
+      target.hp--;
+      if (target.hp <= 0) {
+        if (target.classList.contains("boss")) {
+          score += 10;
+          hp++;
+          bossActive = false;
+          lastBossScore = score;
+        } else {
+          score += target.point;
+        }
+        scoreSpan.textContent = score;
+        hpSpan.textContent = hp;
+        target.remove();
+      }
+      break;
+    }
+  }
+});
+
+function createEnemy() {
+  if (!gameRunning || bossActive) return;
+
+  const enemy = document.createElement("div");
+  enemy.className = "enemy";
+
+  const r = Math.random();
+  if (r < 0.6) {
+    enemy.style.background = "red";
+    enemy.hp = 1;
+    enemy.point = 1;
+    enemy.speed = 2;
+  } else if (r < 0.85) {
+    enemy.style.background = "dodgerblue";
+    enemy.hp = 1;
+    enemy.point = 2;
+    enemy.speed = 4;
+  } else {
+    enemy.style.background = "purple";
+    enemy.hp = 2;
+    enemy.point = 3;
+    enemy.speed = 1.5;
+  }
+
+  let x = Math.random() * (innerWidth - 40);
+  let y = Math.random() * (innerHeight - 40);
+  let dx = (Math.random() - 0.5) * enemy.speed;
+  let dy = (Math.random() - 0.5) * enemy.speed;
+
+  enemy.style.left = x + "px";
+  enemy.style.top = y + "px";
+  document.body.appendChild(enemy);
+
+  const move = setInterval(() => {
+    if (!enemy.parentNode) return clearInterval(move);
+
+    x += dx;
+    y += dy;
+
+    if (x < 0 || x > innerWidth - 40) dx *= -1;
+    if (y < 0 || y > innerHeight - 40) dy *= -1;
+
+    enemy.style.left = x + "px";
+    enemy.style.top = y + "px";
+  }, 16);
+
+  setTimeout(() => {
+    if (enemy.parentNode) {
+      enemy.remove();
+      hp--;
+      hpSpan.textContent = hp;
+      if (hp <= 0) endGame();
+    }
+  }, 3500);
+}
+
+function spawnBoss() {
+  bossActive = true;
+
+  const boss = document.createElement("div");
+  boss.className = "boss";
+  boss.hp = 10;
+
+  let x = innerWidth / 2 - 50;
+  let y = 50;
+
+  document.body.appendChild(boss);
+
+  const move = setInterval(() => {
+    if (!boss.parentNode) return clearInterval(move);
+
+    x += (mouseX - x - 50) * 0.02;
+    y += (mouseY - y - 50) * 0.02;
+
+    x = Math.max(0, Math.min(innerWidth - 100, x));
+    y = Math.max(0, Math.min(innerHeight - 100, y));
+
+    boss.style.left = x + "px";
+    boss.style.top = y + "px";
+  }, 16);
+}
+
+function endGame() {
+  gameRunning = false;
+  gameover.style.display = "flex";
+  finalScore.textContent = "最終分數：" + score;
+}
+
+setInterval(() => {
+  createEnemy();
+  if (score >= 20 && score % 20 === 0 && score !== lastBossScore && !bossActive) {
+    spawnBoss();
+  }
+}, 1000);
+</script>
+
+</body>
+</html>
